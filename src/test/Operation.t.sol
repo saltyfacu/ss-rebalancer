@@ -46,7 +46,8 @@ contract OperationTest is Setup {
         // Withdraw all funds
         vm.prank(user);
         strategy.redeem(_amount, user, user);
-
+        console.log("amount %d", _amount);
+        // console.log("new amount %d", _newAmount);
         assertGe(
             asset.balanceOf(user),
             balanceBefore + _amount,
@@ -88,11 +89,12 @@ contract OperationTest is Setup {
 
         // Withdraw all funds
         vm.prank(user);
-        strategy.redeem(_amount, user, user);
-
+        
+        uint256 _newAmount = strategy.redeem(_amount, user, user);
+        
         assertGe(
             asset.balanceOf(user),
-            balanceBefore + _amount,
+            balanceBefore + _newAmount,
             "!final balance"
         );
     }
@@ -139,11 +141,12 @@ contract OperationTest is Setup {
 
         // Withdraw all funds
         vm.prank(user);
-        strategy.redeem(_amount, user, user);
-
+        
+        uint256 _newAmount = strategy.redeem(_amount, user, user);
+        
         assertGe(
             asset.balanceOf(user),
-            balanceBefore + _amount,
+            balanceBefore + _newAmount,
             "!final balance"
         );
 

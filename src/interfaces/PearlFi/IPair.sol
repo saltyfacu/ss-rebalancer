@@ -2,6 +2,7 @@
 pragma solidity 0.8.18;
 
 interface IPair {
+  function decimals() external view returns (uint8);
   function token0() external view returns (address);
   function token1() external view returns (address);
   function stable() external view returns (bool);

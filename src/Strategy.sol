@@ -108,6 +108,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             _swapTo(asset, dai, usdrNeeded, ERC20(asset).balanceOf(address(this))); //usdc -> dai
             console.log("dai: %s", ERC20(dai).balanceOf(address(this)));
             usdrExchange.swapFromUnderlying(usdrNeeded, address(this)); //dai -> usdr
+            console.log("swapped: %d, usdrNeeded: %d", ERC20(usdr).balanceOf(address(this)), usdrNeeded );
             //TODO check that what I get in return is ok
         }
 
@@ -125,6 +126,8 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
 
         // stake it 
         pearlRewards.deposit(lpToken.balanceOf(address(this)));
+
+        console.log("loose amount: %d", ERC20(asset).balanceOf(address(this)) );
 
     }
 
@@ -158,11 +161,14 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         if (_amount > 0) {
             uint256 lpsToWithdraw = _assetToLpTokens(_amount);
             
-            console.log("LPs to withdraw: %s, balace of LPs in rewards: %s", lpsToWithdraw, lpToken.balanceOf(address(pearlRewards)));
+            console.log("LPs to withdraw: %s, balance of LPs in rewards: %s", lpsToWithdraw, lpToken.balanceOf(address(pearlRewards)));
 
             pearlRewards.withdraw(lpsToWithdraw);
+            console.log("do i have lps staked? %d", pearlRewards.balanceOf(address(this)));
 
-            console.log("Balace of LPs in strat: %s", lpsToWithdraw, lpToken.balanceOf(address(this)));
+            console.log("1. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
+            console.log("1b. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));     
+            console.log("1c. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));     
             pearlRouter.removeLiquidity(
                 lpToken.token0(), 
                 lpToken.token1(), 
@@ -172,6 +178,11 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
                 address(this), 
                 block.timestamp
             );
+            
+            console.log("2. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
+            console.log("2b. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));
+            console.log("2c. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));                 
+
             
             IPearlRouter.route memory usdrToUsdc = IPearlRouter.route(
                 usdr,
@@ -189,6 +200,11 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
                 address(this),
                 block.timestamp
             );
+
+            console.log("3. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
+            console.log("3b. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));   
+            console.log("3c. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));       
+
         }
     }
 
@@ -336,8 +352,9 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         uint256 usdrToAsset = _usdrToAsset(amountUsdr);
         uint256 amountOfAssetInLp = amountAsset + usdrToAsset;
         console.log("usdrToUsdc: %s, amountUsdc: %s", usdrToAsset, amountAsset);
-
-        return _amount/amountOfAssetInLp;
+        
+        // need to scale amount to lp decimals, because amount of assets in lp is in asset decimals
+        return (_amount*1e6/amountOfAssetInLp);
 
     }
 
