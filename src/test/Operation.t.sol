@@ -31,6 +31,10 @@ contract OperationTest is Setup {
         // Earn Interest
         skip(1 days);
 
+        //Add extra rewards (1000 PEARL)
+        uint256 toAirdrop = 1000e18;
+        airdrop(reward, address(strategy), toAirdrop);
+
         // Report profit
         vm.prank(keeper);
         (uint256 profit, uint256 loss) = strategy.report();
@@ -45,6 +49,7 @@ contract OperationTest is Setup {
 
         // Withdraw all funds
         vm.prank(user);
+        console.log("amount %d", _amount);
         strategy.redeem(_amount, user, user);
         console.log("balanceBefore %d", balanceBefore);
         console.log("amount %d", _amount);

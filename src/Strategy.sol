@@ -42,7 +42,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
     IUSDRExchange usdrExchange = IUSDRExchange(0x195F7B233947d51F4C3b756ad41a5Ddb34cEBCe0);
     IPearlRouter pearlRouter = IPearlRouter(0x06374F57991CDc836E5A318569A910FE6456D230);
     IPair lpToken;
-    IRewardPool pearlRewards = IRewardPool(0x97Bd59A8202F8263C2eC39cf6cF6B438D0B45876);
+    IRewardPool pearlRewards = IRewardPool(0x85Fa2331040933A02b154579fAbE6A6a5A765279);
     IQuoterV2 uniQuoter = IQuoterV2(0x61fFE014bA17989E743c5F6cB21bF9697530B21e);
     IUniswapV3Factory uniFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     IStableSwapPool synapseStablePool = IStableSwapPool(0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5);
@@ -122,22 +122,24 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             //TODO check that what I get in return is ok?
         }
 
+        console.log("D5. lp tokens in strat: %s", lpToken.balanceOf(address(this)));
         // add liquidity to pair
         pearlRouter.addLiquidity(
             lpToken.token0(), 
             lpToken.token1(), 
             lpToken.stable(), 
             ERC20(lpToken.token0()).balanceOf(address(this)),
-            assetToDeposit,
+            ERC20(lpToken.token1()).balanceOf(address(this)),
             1, 1,
             address(this), 
             block.timestamp
         );
 
-        // stake it 
+        console.log("D6. lp tokens in strat: %s", lpToken.balanceOf(address(this)));
+
         pearlRewards.deposit(lpToken.balanceOf(address(this)));
 
-        console.log("D6. Loose amount: %d", ERC20(asset).balanceOf(address(this)) );
+        console.log("D7. Loose amount: %d", ERC20(asset).balanceOf(address(this)) );
 
     }
 
@@ -255,6 +257,9 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
 
         (uint256 amountUsdr, uint256 amountAsset) =_balanceOfUnderlying(_lpTokensFullBalance());
 
+        console.log("1. HR:  %d", ERC20(asset).balanceOf(address(this)));
+        console.log("2. HR:  %d", amountAsset);
+        console.log("3. HR:  %d", _usdrToAsset(amountUsdr));
         _totalAssets = ERC20(asset).balanceOf(address(this)) + amountAsset + _usdrToAsset(amountUsdr);
     }
     
@@ -268,6 +273,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         uint256 pearlBalance = ERC20(pearl).balanceOf(address(this));
 
         console.log("C1. PEARL balance: %s", pearlBalance);
+        console.log("C1. DAI balance: %s", ERC20(asset).balanceOf(address(this)));
         
         if (pearlBalance > 0) {
             IPearlRouter.route memory pearlToUsdr = IPearlRouter.route(
@@ -295,7 +301,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         }
 
         console.log("C2. PEARL balance: %s", ERC20(pearl).balanceOf(address(this)));
-        console.log("C3. DAI balance: %s", ERC20(asset).balanceOf(address(this)));
+        console.log("C2. DAI balance: %s", ERC20(asset).balanceOf(address(this)));
 
     }
 
@@ -314,7 +320,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
 
     function _usdrToAsset(uint256 _amount) internal view returns (uint256)
     {
-       return lpToken.getAmountOut(_toEighteen(usdr, _amount), asset);
+       return lpToken.getAmountOut(_amount, usdr);
 
     }
 
@@ -322,7 +328,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
     {
         console.log("ATLP1. _amount: %s", _amount);
         // Amount of asset and USDR in 1 LP token
-        (uint256 amountUsdr, uint256 amountAsset) = _balanceOfUnderlying(1e18);
+        (uint256 amountUsdr, uint256 amountAsset) = _balanceOfUnderlying(1e9);
         console.log("ATLP2. amountUsdr: %s, amountAsset: %s", amountUsdr, amountAsset);
 
         // amount of "asset" in 1 LP token
@@ -331,7 +337,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         console.log("ATLP3. usdrToAsset: %s, amountAsset: %s", usdrToAsset, amountAsset);
         
         // need to scale amount to lp decimals, because amount of assets in lp is in asset decimals
-        return (_amount*1e18/amountOfAssetInLp);
+        return (_amount*1e9/amountOfAssetInLp);
 
     }
 

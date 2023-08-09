@@ -23,6 +23,7 @@ interface IFactory {
 contract Setup is ExtendedTest, IEvents {
     // Contract instancees that we will use repeatedly.
     ERC20 public asset;
+    ERC20 public reward;
     IStrategyInterface public strategy;
 
     mapping(string => address) public tokenAddrs;
@@ -45,7 +46,7 @@ contract Setup is ExtendedTest, IEvents {
     uint256 public minFuzzAmount = 10_000*1e18;
 
     // Max 1 of 1e6 token
-    uint256 public dust = 1*1e6;
+    uint256 public dust = 1*1e18;
 
     // Default prfot max unlock time is set for 10 days
     uint256 public profitMaxUnlockTime = 10 days;
@@ -55,6 +56,9 @@ contract Setup is ExtendedTest, IEvents {
 
         // Set asset
         asset = ERC20(tokenAddrs["DAI"]);
+
+        // Set Reward
+        reward = ERC20(0x7238390d5f6F64e67c3211C343A410E2A3DEc142);
 
         // Set decimals
         decimals = asset.decimals();
@@ -71,6 +75,7 @@ contract Setup is ExtendedTest, IEvents {
         vm.label(management, "management");
         vm.label(address(strategy), "strategy");
         vm.label(performanceFeeRecipient, "performanceFeeRecipient");
+        vm.label(address(reward), "rewardToken");
     }
 
     function setUpStrategy() public returns (address) {
