@@ -165,9 +165,13 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             console.log("F0. Amount to withdraw: %s", _amount);
                         
             uint256 lpsToWithdraw = _assetToLpTokens(_amount);
+            uint256 lpsStaked = pearlRewards.balanceOf(address(this));
+
             console.log("F1. LPs to withdraw: %s", lpsToWithdraw);
-            
-            console.log("F1.5. LPs staked before withdraw: %d", pearlRewards.balanceOf(address(this)));
+            console.log("F1.5. LPs staked before withdraw: %d", lpsStaked);
+
+            //if they ask for more than we have... we have what we have
+            lpsToWithdraw = lpsToWithdraw > lpsStaked ? lpsStaked : lpsToWithdraw;
             
             pearlRewards.withdraw(lpsToWithdraw);
 
