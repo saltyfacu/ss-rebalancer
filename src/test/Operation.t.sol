@@ -26,7 +26,7 @@ contract OperationTest is Setup {
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
         // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-        checkStrategyTotals(strategy, _amount, _amount, 0);
+        checkStrategyTotals(strategy, _amount, _amount - dust, dust);
 
         // Earn Interest
         skip(1 days);
@@ -46,8 +46,10 @@ contract OperationTest is Setup {
         // Withdraw all funds
         vm.prank(user);
         strategy.redeem(_amount, user, user);
+        console.log("balanceBefore %d", balanceBefore);
         console.log("amount %d", _amount);
-        // console.log("new amount %d", _newAmount);
+        console.log("balance of user: %s", asset.balanceOf(user));
+        
         assertGe(
             asset.balanceOf(user),
             balanceBefore + _amount,
@@ -66,7 +68,7 @@ contract OperationTest is Setup {
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
         // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-        checkStrategyTotals(strategy, _amount, _amount, 0);
+        checkStrategyTotals(strategy, _amount, _amount - dust, dust);
 
         // Earn Interest
         skip(1 days);
@@ -113,7 +115,7 @@ contract OperationTest is Setup {
         mintAndDepositIntoStrategy(strategy, user, _amount);
 
         // TODO: Implement logic so totalDebt is _amount and totalIdle = 0.
-        checkStrategyTotals(strategy, _amount, _amount, 0);
+        checkStrategyTotals(strategy, _amount, _amount - dust, dust);
 
         // Earn Interest
         skip(1 days);

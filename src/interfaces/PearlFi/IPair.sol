@@ -9,4 +9,7 @@ interface IPair {
   function totalSupply() external view returns (uint256);
   function balanceOf(address account) external view returns (uint256);
   function getReserves() external view returns (uint256 _reserve0, uint256 _reserve1, uint256 _blockTimestampLast);
+  function claimable0(address _user) external view returns (uint256);
+  function claimable1(address _user) external view returns (uint256);
+  function claimFees() external returns (uint256, uint256);
 }

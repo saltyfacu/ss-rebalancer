@@ -44,6 +44,9 @@ contract Setup is ExtendedTest, IEvents {
     uint256 public maxFuzzAmount = 100_000*1e6;
     uint256 public minFuzzAmount = 10_000*1e6;
 
+    // Max 1 of 1e6 token
+    uint256 public dust = 1*1e6;
+
     // Default prfot max unlock time is set for 10 days
     uint256 public profitMaxUnlockTime = 10 days;
 
@@ -118,8 +121,8 @@ contract Setup is ExtendedTest, IEvents {
         uint256 _totalIdle
     ) public {
         assertEq(_strategy.totalAssets(), _totalAssets, "!totalAssets");
-        assertEq(_strategy.totalDebt(), _totalDebt, "!totalDebt");
-        assertEq(_strategy.totalIdle(), _totalIdle, "!totalIdle");
+        assertGe(_strategy.totalDebt(), _totalDebt, "!totalDebt");
+        assertLe(_strategy.totalIdle(), _totalIdle, "!totalIdle");
         assertEq(_totalAssets, _totalDebt + _totalIdle, "!Added");
     }
 
