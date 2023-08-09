@@ -10,14 +10,22 @@ interface IPearlRouter {
 
   function getAmountsOut(uint256 amountIn, address[] memory routes) external returns (uint256[] memory amounts);
   
-  function quoteRemoveLiquidity(
+    function quoteRemoveLiquidity(
         address tokenA,
         address tokenB,
         bool stable,
         uint256 liquidity
     ) external returns (uint256 amountA, uint256 amountB);
+    
+    function quoteAddLiquidity(
+        address tokenA,
+        address tokenB,
+        bool stable,
+        uint256 amountADesired,
+        uint256 amountBDesired
+    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
-  function addLiquidity(
+    function addLiquidity(
         address tokenA,
         address tokenB,
         bool stable,

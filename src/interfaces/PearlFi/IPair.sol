@@ -12,4 +12,5 @@ interface IPair {
   function claimable0(address _user) external view returns (uint256);
   function claimable1(address _user) external view returns (uint256);
   function claimFees() external returns (uint256, uint256);
+  function getAmountOut(uint256, address) external view returns (uint256);
 }

@@ -41,14 +41,13 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
 
     IUSDRExchange usdrExchange = IUSDRExchange(0x195F7B233947d51F4C3b756ad41a5Ddb34cEBCe0);
     IPearlRouter pearlRouter = IPearlRouter(0x06374F57991CDc836E5A318569A910FE6456D230);
-    IPair lpToken = IPair(0xD17cb0f162f133e339C0BbFc18c36c357E681D6b);
+    IPair lpToken;
     IRewardPool pearlRewards = IRewardPool(0x97Bd59A8202F8263C2eC39cf6cF6B438D0B45876);
     IQuoterV2 uniQuoter = IQuoterV2(0x61fFE014bA17989E743c5F6cB21bF9697530B21e);
     IUniswapV3Factory uniFactory = IUniswapV3Factory(0x1F98431c8aD98523631AE4a59f267346ea31F984);
     IStableSwapPool synapseStablePool = IStableSwapPool(0x85fCD7Dd0a1e1A9FCD5FD886ED522dE8221C3EE5);
 
     address public constant usdr = 0x40379a439D4F6795B6fc9aa5687dB461677A2dBa;
-    address public constant dai = 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
     address public constant pearl = 0x7238390d5f6F64e67c3211C343A410E2A3DEc142;
     
 
@@ -56,16 +55,16 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         address _asset,
         string memory _name
     ) BaseTokenizedStrategy(_asset, _name) {
-        router = 0xE592427A0AEce92De3Edee1F18E0157C05861564;
-        base = asset;
-        _setUniFees(asset, dai, 100);
+        
+        lpToken = IPair(pearlRouter.pairFor(usdr, asset, true));
 
         ERC20(asset).safeApprove(address(router), type(uint256).max);
         ERC20(asset).safeApprove(address(pearlRouter), type(uint256).max);
+        ERC20(asset).safeApprove(address(usdrExchange), type(uint256).max);
+        ERC20(asset).safeApprove(address(synapseStablePool), type(uint256).max);
+
         ERC20(usdr).safeApprove(address(pearlRouter), type(uint256).max);
         ERC20(usdr).safeApprove(address(usdrExchange), type(uint256).max);
-        ERC20(dai).safeApprove(address(usdrExchange), type(uint256).max);
-        ERC20(dai).safeApprove(address(synapseStablePool), type(uint256).max);
         ERC20(pearl).safeApprove(address(pearlRouter), type(uint256).max);
 
         ERC20(address(lpToken)).safeApprove(address(pearlRewards), type(uint256).max);
@@ -89,29 +88,37 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
      * to deposit in the yield source.
      */
     function _deployFunds(uint256 _amount) internal override {
-        console.log("D1. Deploy: %d", _amount );
-        // get the ratio an amount we need of each
-        ( uint256 lpBalanceOfAsset, uint256 lpBalanceOfUsdr, ) = lpToken.getReserves();
-
-        uint256 usdrNeeded = _toEighteen(asset, _amount) * _toEighteen(usdr, lpBalanceOfUsdr) / (_toEighteen(asset, lpBalanceOfAsset) + _toEighteen(usdr, lpBalanceOfUsdr));
+        console.log("D1. Deploy: %s", _amount );
+        console.log("D1.1. lpToken: %s", address(lpToken) );
         
-        console.log("D2. usdrNeeded: %d", usdrNeeded );
+        // get the ratio an amount we need of each
+        ( uint256 lpBalanceOfUsdr, uint256 lpBalanceOfAsset, ) = lpToken.getReserves();
+        console.log("D1.5 lpBalanceOfUsdr: %s, lpBalanceOfAsset: %s", _toEighteen(usdr, lpBalanceOfUsdr), _toEighteen(asset, lpBalanceOfAsset));
+        
+        uint256 usdrNeeded = _toEighteen(asset, _amount) * _toEighteen(usdr, lpBalanceOfUsdr) / (_toEighteen(asset, lpBalanceOfAsset) + _toEighteen(usdr, lpBalanceOfUsdr));
+        console.log("D2. usdrNeeded: %s", usdrNeeded );
 
-        uint256 usdrBalance = _toEighteen(usdr, ERC20(usdr).balanceOf(address(this)));
+        (uint256 usdrToSwap, uint256 assetToDeposit, ) = pearlRouter.quoteAddLiquidity(
+            usdr,
+            asset,
+            true,
+            usdrNeeded/1e9,
+            ERC20(asset).balanceOf(address(this))
+        );
+
+        console.log("D2.1. usdrToSwap adj: %s", usdrToSwap );
+
+        uint256 usdrBalance = ERC20(usdr).balanceOf(address(this));
 
         if (usdrBalance < usdrNeeded) {
             usdrNeeded = usdrNeeded - usdrBalance;
 
             // 1 USDR = 1 DAI
-            // Swap USDC for DAI
             // deposit DAI in tangible
 
-            // TODO: the max below is fine? maybe lower?
-            _swapTo(asset, dai, usdrNeeded, ERC20(asset).balanceOf(address(this))); //usdc -> dai
-            console.log("D3. DAI in strat: %s", ERC20(dai).balanceOf(address(this)));
-            usdrExchange.swapFromUnderlying(usdrNeeded, address(this)); //dai -> usdr
-            console.log("D4. USDR swapped: %d, usdrNeeded: %d, DAI in the strat: %s", ERC20(usdr).balanceOf(address(this)), usdrNeeded, ERC20(dai).balanceOf(address(this)) );
-            console.log("D5. USDR in strat: %d, USDC in strat: %d", ERC20(usdr).balanceOf(address(this)), ERC20(asset).balanceOf(address(this)) );
+            console.log("D3. DAI in strat: %s", ERC20(asset).balanceOf(address(this)));
+            usdrExchange.swapFromUnderlying(_toEighteen(usdr, usdrToSwap), address(this));
+            console.log("D4. USDR swapped: %s, usdrNeeded: %s, DAI in the strat: %s", ERC20(usdr).balanceOf(address(this)), usdrToSwap, ERC20(asset).balanceOf(address(this)) );
             //TODO check that what I get in return is ok?
         }
 
@@ -120,8 +127,8 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             lpToken.token0(), 
             lpToken.token1(), 
             lpToken.stable(), 
-            ERC20(lpToken.token0()).balanceOf(address(this)), 
-            ERC20(lpToken.token1()).balanceOf(address(this)), 
+            ERC20(lpToken.token0()).balanceOf(address(this)),
+            assetToDeposit,
             1, 1,
             address(this), 
             block.timestamp
@@ -130,12 +137,22 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         // stake it 
         pearlRewards.deposit(lpToken.balanceOf(address(this)));
 
-        console.log("loose amount: %d", ERC20(asset).balanceOf(address(this)) );
+        console.log("D6. Loose amount: %d", ERC20(asset).balanceOf(address(this)) );
 
     }
 
     function _toEighteen(address _token, uint256 _amount) internal view returns (uint256) {
         return  _amount * (10 ** (18 - ERC20(_token).decimals()));
+    }
+
+    function _toNine(address _token, uint256 _amount) internal view returns (uint256 converted_amount) {
+        uint256 token_decimals = ERC20(_token).decimals();
+
+        if (token_decimals > 9) {
+            converted_amount = _amount / (10 ** (ERC20(_token).decimals() - 9));
+        } else {
+            converted_amount = _amount * (10 ** (9 - ERC20(_token).decimals()));
+        }
     }
 
     /**
@@ -178,8 +195,8 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             console.log("F2. LPs staked after withdraw: %d", pearlRewards.balanceOf(address(this)));
 
             console.log("F3. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
-            console.log("F4. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));     
-            console.log("F5. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));     
+            console.log("F4. balance of USDR in strat: %s", ERC20(usdr).balanceOf(address(this)));     
+            console.log("F5. balance of DAI in strat: %s", ERC20(asset).balanceOf(address(this)));     
             pearlRouter.removeLiquidity(
                 lpToken.token0(), 
                 lpToken.token1(), 
@@ -192,45 +209,14 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             
             console.log("After remove liquidity");
             console.log("F6. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
-            console.log("F7. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));
-            console.log("F8. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));                 
+            console.log("F7. balance of USDR in strat: %s", ERC20(usdr).balanceOf(address(this)));
+            console.log("F8. balance of DAI in strat: %s", ERC20(asset).balanceOf(address(this)));                 
 
             usdrExchange.swapToUnderlying(ERC20(usdr).balanceOf(address(this)), address(this)); //usdr-->dai
-            synapseStablePool.swap(
-                1, // DAI
-                2, // USDC 
-                ERC20(dai).balanceOf(address(this)),
-                0,
-                block.timestamp 
-            );            
-            
-            console.log("After swap to USDC");
+            console.log("After swap from USDR");
             console.log("F9. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
-            console.log("F10. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));
-            console.log("F11. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));
-            /*
-            IPearlRouter.route memory usdrToUsdc = IPearlRouter.route(
-                usdr,
-                asset,
-                true
-            );
-            
-            IPearlRouter.route[] memory routes = new IPearlRouter.route[](1);
-            routes[0] = usdrToUsdc;
-            
-            pearlRouter.swapExactTokensForTokens(
-                ERC20(usdr).balanceOf(address(this)),
-                0,
-                routes,
-                address(this),
-                block.timestamp
-            );
-            */
-
-            console.log("3. balance of LPs in strat: %s", lpToken.balanceOf(address(this)));
-            console.log("3b. balance of usdr in strat: %s", ERC20(usdr).balanceOf(address(this)));   
-            console.log("3c. balance of usdc in strat: %s", ERC20(asset).balanceOf(address(this)));       
-
+            console.log("F10. balance of USDR in strat: %s", ERC20(usdr).balanceOf(address(this)));
+            console.log("F11. balance of DAI in strat: %s", ERC20(asset).balanceOf(address(this)));
         }
     }
 
@@ -277,7 +263,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         // claim lp fees 
         lpToken.claimFees();
         
-        // get PEARL, sell them for usdc 
+        // get PEARL, sell them for asset 
         pearlRewards.getReward();
         uint256 pearlBalance = ERC20(pearl).balanceOf(address(this));
 
@@ -289,7 +275,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
                 usdr,
                 false
             );
-            IPearlRouter.route memory usdrToUsdc = IPearlRouter.route(
+            IPearlRouter.route memory usdrToAsset = IPearlRouter.route(
                 usdr,
                 asset,
                 true
@@ -297,7 +283,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             
             IPearlRouter.route[] memory routes = new IPearlRouter.route[](2);
             routes[0] = pearlToUsdr;
-            routes[1] = usdrToUsdc;
+            routes[1] = usdrToAsset;
             
             pearlRouter.swapExactTokensForTokens(
                 ERC20(pearl).balanceOf(address(this)),
@@ -309,7 +295,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         }
 
         console.log("C2. PEARL balance: %s", ERC20(pearl).balanceOf(address(this)));
-        console.log("C3. USDC balance: %s", ERC20(asset).balanceOf(address(this)));
+        console.log("C3. DAI balance: %s", ERC20(asset).balanceOf(address(this)));
 
     }
 
@@ -326,66 +312,26 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
 
     }
 
-    function _usdrToAsset(uint256 _amount) internal view returns (uint256 usdrToUsdcAmount)
+    function _usdrToAsset(uint256 _amount) internal view returns (uint256)
     {
-        // 1 USDR = 1 DAI
-        // so we quote DAI->USDC
-        
-        usdrToUsdcAmount = synapseStablePool.calculateSwap(
-            1, // DAI
-            2, // USDC 
-            _toEighteen(usdr, _amount) 
-        );
-
-    }
-
-
-    // this fn is here just in case
-    function _usdrToAssetUniV3(uint256 _amount) internal returns (uint256 usdrToUsdcAmount)
-    {
-
-        address pool = uniFactory.getPool(dai, asset, 100);
-
-        (uint160 sqrtPriceX96,,,,,, ) = IUniswapV3Pool(pool).slot0();
-        //USDC
-        address token0 = IUniswapV3Pool(pool).token0();
-        //DAI
-        address token1 = IUniswapV3Pool(pool).token1();
-        
-        uint256 decimal0 = ERC20(token0).decimals();
-        uint256 decimal1 = ERC20(token1).decimals();
-
-        uint256 buyOneOfToken0 = ((sqrtPriceX96 / 2**96)**2) / (10 ** decimal1 / 10 ** decimal0);
-        usdrToUsdcAmount = _amount * buyOneOfToken0;
-
-        IQuoterV2.QuoteExactInputSingleParams memory params = IQuoterV2.QuoteExactInputSingleParams({
-                    tokenIn: dai, 
-                    tokenOut: asset, 
-                    amountIn: _toEighteen(usdr, _amount), 
-                    fee: 100,
-                    sqrtPriceLimitX96: 0
-        });
-        
-        try uniQuoter.quoteExactInputSingle(params) {} catch Error(string memory revertData) {
-            (usdrToUsdcAmount,,,) = abi.decode(bytes(revertData), (uint256, uint160, uint32, uint256));
-        }
+       return lpToken.getAmountOut(_toEighteen(usdr, _amount), asset);
 
     }
 
     function _assetToLpTokens(uint256 _amount) internal returns (uint256)
     {
         console.log("ATLP1. _amount: %s", _amount);
-        // Amount of USDC and USDR in 1 LP token
-        (uint256 amountUsdr, uint256 amountAsset) = _balanceOfUnderlying(1e6);
-        console.log("ATLP2. amountUsdr: %s, amountUsdc: %s", amountUsdr, amountAsset);
+        // Amount of asset and USDR in 1 LP token
+        (uint256 amountUsdr, uint256 amountAsset) = _balanceOfUnderlying(1e18);
+        console.log("ATLP2. amountUsdr: %s, amountAsset: %s", amountUsdr, amountAsset);
 
-        // amount of USDC in 1 LP token
+        // amount of "asset" in 1 LP token
         uint256 usdrToAsset = _usdrToAsset(amountUsdr);
         uint256 amountOfAssetInLp = amountAsset + usdrToAsset;
-        console.log("ATLP3. usdrToUsdc: %s, amountUsdc: %s", usdrToAsset, amountAsset);
+        console.log("ATLP3. usdrToAsset: %s, amountAsset: %s", usdrToAsset, amountAsset);
         
         // need to scale amount to lp decimals, because amount of assets in lp is in asset decimals
-        return (_amount*1e6/amountOfAssetInLp);
+        return (_amount*1e18/amountOfAssetInLp);
 
     }
 

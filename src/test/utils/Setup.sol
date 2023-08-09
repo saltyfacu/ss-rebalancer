@@ -41,8 +41,8 @@ contract Setup is ExtendedTest, IEvents {
     uint256 public MAX_BPS = 10_000;
 
     // Fuzz from $0.01 of 1e6 stable coins up to 1 trillion of a 1e18 coin
-    uint256 public maxFuzzAmount = 100_000*1e6;
-    uint256 public minFuzzAmount = 10_000*1e6;
+    uint256 public maxFuzzAmount = 100_000*1e18;
+    uint256 public minFuzzAmount = 10_000*1e18;
 
     // Max 1 of 1e6 token
     uint256 public dust = 1*1e6;
@@ -54,7 +54,7 @@ contract Setup is ExtendedTest, IEvents {
         _setTokenAddrs();
 
         // Set asset
-        asset = ERC20(tokenAddrs["USDC"]);
+        asset = ERC20(tokenAddrs["DAI"]);
 
         // Set decimals
         decimals = asset.decimals();
