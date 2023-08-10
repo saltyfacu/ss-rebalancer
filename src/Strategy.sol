@@ -252,6 +252,12 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         if (!TokenizedStrategy.isShutdown()) {
                 _claimAndSellRewards();
 
+                // check if we got someting from selling the loot and deploy it
+                uint256 balanceOfAsset = ERC20(asset).balanceOf(address(this));
+                if (balanceOfAsset > 0) {
+                    _deployFunds(balanceOfAsset);
+                }
+
             // TODO: deposit loose funds
         }
 
