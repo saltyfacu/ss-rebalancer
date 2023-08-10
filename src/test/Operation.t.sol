@@ -79,15 +79,18 @@ contract OperationTest is Setup {
         skip(1 days);
 
         // TODO: implement logic to simulate earning interest.
-        uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
-        airdrop(asset, address(strategy), toAirdrop);
+        //Add extra rewards (1000 PEARL)
+        uint256 toAirdrop = 1000e18;
+        airdrop(reward, address(strategy), toAirdrop);
 
         // Report profit
         vm.prank(keeper);
         (uint256 profit, uint256 loss) = strategy.report();
 
         // Check return Values
-        assertGe(profit, toAirdrop, "!profit");
+        uint256 toAirdropPrice = getPearlPrice(toAirdrop);
+        assertGe(toAirdropPrice, 0, "!price");
+        assertGe(profit, toAirdropPrice, "!profit");
         assertEq(loss, 0, "!loss");
 
         skip(strategy.profitMaxUnlockTime());
@@ -126,15 +129,17 @@ contract OperationTest is Setup {
         skip(1 days);
 
         // TODO: implement logic to simulate earning interest.
-        uint256 toAirdrop = (_amount * _profitFactor) / MAX_BPS;
-        airdrop(asset, address(strategy), toAirdrop);
+        uint256 toAirdrop = 1000e18;
+        airdrop(reward, address(strategy), toAirdrop);
 
         // Report profit
         vm.prank(keeper);
         (uint256 profit, uint256 loss) = strategy.report();
 
         // Check return Values
-        assertGe(profit, toAirdrop, "!profit");
+        uint256 toAirdropPrice = getPearlPrice(toAirdrop);
+        assertGe(toAirdropPrice, 0, "!price");
+        assertGe(profit, toAirdropPrice, "!profit");
         assertEq(loss, 0, "!loss");
 
         skip(strategy.profitMaxUnlockTime());

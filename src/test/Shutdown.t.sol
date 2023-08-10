@@ -33,10 +33,14 @@ contract ShutdownTest is Setup {
         // Withdraw all funds
         vm.prank(user);
         strategy.redeem(_amount, user, user);
+        
+        uint256 balanceAfter = asset.balanceOf(user);
+        uint256 fee = 25;
+        uint256 bps = 10000;
 
         assertGe(
-            asset.balanceOf(user),
-            balanceBefore + _amount,
+            balanceAfter,
+            (balanceBefore + _amount) * (bps-fee)/bps, // takes into account the 25 bps fee of usdr
             "!final balance"
         );
     }

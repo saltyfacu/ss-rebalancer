@@ -8,7 +8,7 @@ interface IPearlRouter {
         bool stable;
     }
 
-  function getAmountsOut(uint256 amountIn, address[] memory routes) external returns (uint256[] memory amounts);
+  function getAmountsOut(uint256 amountIn, route[] memory routes) external returns (uint256[] memory amounts);
   
     function quoteRemoveLiquidity(
         address tokenA,

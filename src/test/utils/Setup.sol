@@ -9,6 +9,9 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import {Strategy} from "../../Strategy.sol";
 import {IStrategyInterface} from "../../interfaces/IStrategyInterface.sol";
 
+import {IPearlRouter} from "../../interfaces/PearlFi/IPearlRouter.sol";
+
+
 // Inherit the events so they can be checked if desired.
 import {IEvents} from "@tokenized-strategy/interfaces/IEvents.sol";
 
@@ -148,6 +151,30 @@ contract Setup is ExtendedTest, IEvents {
 
         vm.prank(management);
         strategy.setPerformanceFee(_performanceFee);
+    }
+
+    function getPearlPrice(uint256 _amount) public returns (uint256) {
+        IPearlRouter pearlRouter = IPearlRouter(0x06374F57991CDc836E5A318569A910FE6456D230);
+        address usdr = 0x40379a439D4F6795B6fc9aa5687dB461677A2dBa;
+        address pearl = 0x7238390d5f6F64e67c3211C343A410E2A3DEc142;
+
+        IPearlRouter.route memory pearlToUsdr = IPearlRouter.route(
+            pearl,
+            usdr,
+            false
+        );
+        IPearlRouter.route memory usdrToAsset = IPearlRouter.route(
+            usdr,
+            address(asset),
+            true
+        );
+            
+        IPearlRouter.route[] memory routes = new IPearlRouter.route[](2);
+        routes[0] = pearlToUsdr;
+        routes[1] = usdrToAsset;
+
+        uint256[] memory amounts = pearlRouter.getAmountsOut(_amount, routes);
+        return amounts[2];
     }
 
     function _setTokenAddrs() internal {

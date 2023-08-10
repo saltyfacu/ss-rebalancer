@@ -98,7 +98,7 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         uint256 usdrNeeded = _toEighteen(asset, _amount) * _toEighteen(usdr, lpBalanceOfUsdr) / (_toEighteen(asset, lpBalanceOfAsset) + _toEighteen(usdr, lpBalanceOfUsdr));
         console.log("D2. usdrNeeded: %s", usdrNeeded );
 
-        (uint256 usdrToSwap, uint256 assetToDeposit, ) = pearlRouter.quoteAddLiquidity(
+        (uint256 usdrToSwap, , ) = pearlRouter.quoteAddLiquidity(
             usdr,
             asset,
             true,
@@ -257,9 +257,9 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
 
         (uint256 amountUsdr, uint256 amountAsset) =_balanceOfUnderlying(_lpTokensFullBalance());
 
-        console.log("1. HR:  %d", ERC20(asset).balanceOf(address(this)));
-        console.log("2. HR:  %d", amountAsset);
-        console.log("3. HR:  %d", _usdrToAsset(amountUsdr));
+        console.log("HR1. DAI in strat: %d", ERC20(asset).balanceOf(address(this)));
+        console.log("HR2. DAI  in LP: %d", amountAsset);
+        console.log("HR3. USDR to asset: %d", _usdrToAsset(amountUsdr));
         _totalAssets = ERC20(asset).balanceOf(address(this)) + amountAsset + _usdrToAsset(amountUsdr);
     }
     
