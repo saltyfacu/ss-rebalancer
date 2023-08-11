@@ -119,7 +119,6 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
             console.log("D3. DAI in strat: %s", ERC20(asset).balanceOf(address(this)));
             usdrExchange.swapFromUnderlying(_toEighteen(usdr, usdrToSwap), address(this));
             console.log("D4. USDR swapped: %s, usdrNeeded: %s, DAI in the strat: %s", ERC20(usdr).balanceOf(address(this)), usdrToSwap, ERC20(asset).balanceOf(address(this)) );
-            //TODO check that what I get in return is ok?
         }
 
         console.log("D5. lp tokens in strat: %s", lpToken.balanceOf(address(this)));
@@ -257,8 +256,6 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
                 if (balanceOfAsset > 0) {
                     _deployFunds(balanceOfAsset);
                 }
-
-            // TODO: deposit loose funds
         }
 
         (uint256 amountUsdr, uint256 amountAsset) =_balanceOfUnderlying(_lpTokensFullBalance());
@@ -277,6 +274,9 @@ contract Strategy is BaseTokenizedStrategy, UniswapV3Swapper {
         // get PEARL, sell them for asset 
         pearlRewards.getReward();
         uint256 pearlBalance = ERC20(pearl).balanceOf(address(this));
+
+        console.log("C0. block timestamp: %s", block.timestamp);
+        console.log("C0. lastTimeRewardApplicable: %s", pearlRewards.lastTimeRewardApplicable());
 
         console.log("C1. PEARL balance: %s", pearlBalance);
         console.log("C1. DAI balance: %s", ERC20(asset).balanceOf(address(this)));

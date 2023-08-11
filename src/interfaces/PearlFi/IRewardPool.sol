@@ -12,4 +12,6 @@ interface IRewardPool {
     function rewardsToken() external view returns (address);
     function emergency() external view returns (bool);
     function emergencyWithdraw() external;
+    function lastTimeRewardApplicable() external returns (uint256);
+
 }
